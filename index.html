@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>US Mobile Homes choropleth map</title>
+    </head>
+    <script src="https://d3js.org/d3.v4.min.js"></script>
+    <style>
+        div.tooltip {   
+          position: absolute;           
+          text-align: center;           
+          width: 100px;                  
+          height: 100px;                 
+          padding: 2px;             
+          font: 12px sans-serif;        
+          background: lightsteelblue;   
+          border: 0px;      
+          border-radius: 8px;           
+          pointer-events: none;         
+        }
+    </style>
+    <body>
+        <svg style='background-color: lightyellow'></svg>
+
+        <script>
+            var svgCanvas = d3.select("svg")
+                .attr("width",960)
+                .attr("height",540)
+                .attr("class","svgCanvas")
+            
+            d3.json("data.json",function(jsonData){
+                const nodes = jsonData["nodes"].map(d => Object.create(d));
+                const links = jsonData["links"].map(d => Object.create(d));
+                let site_detail = {"site01":0,"site02":0,"site03":0,"site04":0,"site05":0,"site06":0,"site07":0,"site08":0,"site09":0,"site10":0,"site11":0}
+                let site_amount = {"site01":0,"site02":0,"site03":0,"site04":0,"site05":0,"site06":0,"site07":0,"site08":0,"site09":0,"site10":0,"site11":0}
+                for (index = 0; index < links.length; index++) {                             
+                    site_detail[links[index].node01] += 1
+                    site_detail[links[index].node02] += 1
+                    site_amount[links[index].node01] += links[index].amount
+                    site_amount[links[index].node02] += links[index].amount
+                }
+
+                console.log(site_amount)
+                
+                svgCanvas.selectAll("circle")
+                    .data(nodes).enter().append("circle")
+                    .attr("siteId",item=>item.id)
+                    .attr("cx",item=>item.x)
+                    .attr("cy",item=>item.y)
+                    .attr("r",function(item){
+                        var total = 0;
+                        for (index = 0; index < links.length; index++) {                             
+                            if(links[index].node01==item.id || links[index].node02==item.id){
+                                total = total + links[index].amount
+                            }                            
+                        }
+                        return total/50
+                    })
+                    .attr("fill", "#69b3a2")
+                    .on("mouseover",function(){
+                        svgCanvas.selectAll("circle")
+                            .attr("opacity",0.5);
+                        let siteId = d3.select(this).attr("siteId")
+                        d3.select(this)
+                            .attr("opacity",1);
+                        svgCanvas.selectAll("line")
+                            .attr("opacity",0.5);
+                        svgCanvas.selectAll("line")
+                            .filter(function(d){
+                                return d.node02 == siteId || d.node01 == siteId
+                            })
+                            .attr("opacity",1);
+                        div.transition()        
+                            .duration(200)      
+                            .style("opacity", .9);      
+                        div .html("<p>SiteID:"+siteId+"</p><p>Total connection:"+String(site_detail[siteId])+"</p><p>Amount Traded:"+site_amount[siteId]+"</p>")  
+                            .style("left", (d3.event.pageX) + "px")     
+                            .style("top", (d3.event.pageY - 28) + "px"); 
+                    })
+                    .on("mouseout",function(){
+                        svgCanvas.selectAll("circle")
+                            .attr("opacity",1);
+                        svgCanvas.selectAll("line")
+                            .attr("opacity",1);
+                        div.transition()        
+                            .duration(500)      
+                            .style("opacity", 0);
+                    });
+                
+                var div = d3.select("body").append("div")   
+                    .attr("class", "tooltip")               
+                    .style("opacity", 0);
+         
+            
+                svgCanvas.selectAll("line")
+                    .data(links).enter().append("line")
+                    .attr("class",item=> item.node01+"-"+item.node02)
+                    .attr("x1",function(item){
+                        for (index1 = 0; index1 < nodes.length; index1++) {                             
+                            if(nodes[index1].id==item.node01){
+                                return nodes[index1].x
+                            }                            
+                        } 
+                    })
+                    .attr("y1",function(item){
+                        for (index1 = 0; index1 < nodes.length; index1++) { 
+                            
+                                if(nodes[index1].id==item.node01){
+                                    
+                                    return nodes[index1].y
+                                }
+                                
+                            }
+                    })
+                    .attr("x2",function(item){
+                        for (index1 = 0; index1 < nodes.length; index1++) { 
+                            
+                                if(nodes[index1].id==item.node02){
+                                    
+                                    return nodes[index1].x
+                                }
+                                
+                            }
+                    })
+                    .attr("y2",function(item){
+                        for (index1 = 0; index1 < nodes.length; index1++) { 
+                            
+                                if(nodes[index1].id==item.node02){
+                                    
+                                    return nodes[index1].y
+                                }
+                                
+                            }
+                    })
+                    .attr("stroke","#69b3a2")
+                    .style("stroke-width",d=>Math.sqrt(d.amount/100));
+                
+            });
+        </script>
+    </body>
+</html>
